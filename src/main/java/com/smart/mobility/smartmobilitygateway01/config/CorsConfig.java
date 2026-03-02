@@ -15,11 +15,40 @@ public class CorsConfig {
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        // Allow all origins, methods, and headers (adjust in production)
-        corsConfiguration.setAllowedOriginPatterns(List.of("*"));
-        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
-        corsConfiguration.setAllowedHeaders(List.of("*"));
+
+        // Allow specific origins including frontend dev server and Keycloak
+        corsConfiguration.setAllowedOrigins(List.of(
+            "http://localhost:5173",      // Frontend admin UI (dev)
+            "http://localhost:3000",       // Frontend mobile/client (dev)
+            "http://localhost:8080",       // Keycloak
+            "http://localhost:8765"        // Gateway itself
+        ));
+
+        // Allow all HTTP methods
+        corsConfiguration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
+
+        // Allow essential headers
+        corsConfiguration.setAllowedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With",
+            "X-User-Id",
+            "X-User-Email",
+            "X-User-Name",
+            "Accept",
+            "Origin"
+        ));
+
+        // Expose these headers to the client
+        corsConfiguration.setExposedHeaders(Arrays.asList(
+            "Authorization",
+            "Content-Type",
+            "X-Total-Count",
+            "X-Page-Number"
+        ));
+
         corsConfiguration.setAllowCredentials(true);
+        corsConfiguration.setMaxAge(3600L); // Cache preflight for 1 hour
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfiguration);
