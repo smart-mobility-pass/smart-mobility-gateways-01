@@ -14,7 +14,6 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
 import reactor.core.publisher.Mono;
 
 import org.springframework.security.web.server.ServerAuthenticationEntryPoint;
@@ -52,10 +51,15 @@ public class SecurityConfig {
                         // Admin endpoints
                         .pathMatchers("/admin/**").hasRole("ADMIN")
 
+                        // Specific admin-only endpoint: création de profil (backoffice)
+                        .pathMatchers(HttpMethod.POST, "/users/profile").hasRole("ADMIN")
+
                         // User endpoints
-                        .pathMatchers("/users/me").hasRole("USER")
-                        .pathMatchers("/users/summary/me").hasRole("USER")
-                        .pathMatchers("/api/passes/me/**").hasRole("USER")
+                        .pathMatchers("/users/me").hasAnyRole("USER", "ADMIN")
+                        .pathMatchers("/users/summary/me").hasAnyRole("USER", "ADMIN")
+                        // matcher exact pour /api/passes/me (et sous-chemins ci-dessous) — autorise aussi ADMIN
+                        .pathMatchers("/api/passes/me").hasAnyRole("USER", "ADMIN")
+                        .pathMatchers("/api/passes/me/**").hasAnyRole("USER", "ADMIN")
 
                         // Inter-service endpoints (Require authentication with at least USER or ADMIN)
                         .pathMatchers("/users/**").hasAnyRole("USER", "ADMIN")
@@ -95,8 +99,12 @@ public class SecurityConfig {
     @Bean
     public ServerAccessDeniedHandler accessDeniedHandler() {
         return (exchange, e) -> ReactiveSecurityContextHolder.getContext()
-                .map(SecurityContext::getAuthentication)
-                .flatMap(auth -> {
+                .flatMap(ctx -> {
+                    var auth = ctx.getAuthentication();
+                    if (auth == null) {
+                        return Mono.empty();
+                    }
+
                     String roles = auth.getAuthorities().stream()
                             .map(GrantedAuthority::getAuthority)
                             .collect(Collectors.joining(", "));
