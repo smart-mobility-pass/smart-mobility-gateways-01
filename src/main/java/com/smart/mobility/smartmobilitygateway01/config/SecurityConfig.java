@@ -78,9 +78,38 @@ public class SecurityConfig {
                         // Fallback
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwt -> jwt.jwtAuthenticationConverter(grantedAuthoritiesExtractor())));
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(grantedAuthoritiesExtractor()))); // Bean injecté
+                                                                                                     // automatiquement
 
         return http.build();
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+    private String issuerUri;
+
+    @Bean
+    public org.springframework.security.oauth2.jwt.ReactiveJwtDecoder jwtDecoder() {
+        org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder jwtDecoder = (org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder) org.springframework.security.oauth2.jwt.ReactiveJwtDecoders
+                .fromIssuerLocation(issuerUri);
+
+        org.springframework.security.oauth2.core.OAuth2TokenValidator<Jwt> withTimestamp = org.springframework.security.oauth2.jwt.JwtValidators
+                .createDefault();
+        org.springframework.security.oauth2.core.OAuth2TokenValidator<Jwt> customIssuerValidator = token -> {
+            String iss = token.getClaimAsString("iss");
+            if (iss != null && (iss.contains("localhost:8080") || iss.contains("192.168.16.104:8080")
+                    || iss.equals(issuerUri))) {
+                return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success();
+            }
+            return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult
+                    .failure(new org.springframework.security.oauth2.core.OAuth2Error("invalid_issuer",
+                            "The iss claim is not valid", null));
+        };
+
+        org.springframework.security.oauth2.core.OAuth2TokenValidator<Jwt> validator = new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(
+                withTimestamp, customIssuerValidator);
+        jwtDecoder.setJwtValidator(validator);
+
+        return jwtDecoder;
     }
 
     @Bean
