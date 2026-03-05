@@ -70,6 +70,7 @@ public class SecurityConfig {
                         .pathMatchers("/api/pricing/**").hasAnyRole("USER", "ADMIN")
                         .pathMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
                         .pathMatchers("/accounts/**").hasAnyRole("USER", "ADMIN")
+                        .pathMatchers("/notifications/**").hasAnyRole("USER", "ADMIN")
 
                         // Catalog Access: Admin can manage, Users can view
                         .pathMatchers(HttpMethod.GET, "/api/catalog/**").hasAnyRole("USER", "ADMIN")

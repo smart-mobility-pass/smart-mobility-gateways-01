@@ -21,6 +21,8 @@ public class RouteConfig {
                                                 .uri("lb://pricing-discount-service"))
                                 .route("billing-service-route", r -> r.path("/api/payments/**", "/accounts/**")
                                                 .uri("lb://billing-service"))
+                                .route("notification-service-route", r -> r.path("/notifications/**")
+                                                .uri("lb://notification-service"))
                                 .build();
         }
 }
